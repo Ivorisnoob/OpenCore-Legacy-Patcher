@@ -780,6 +780,10 @@ class Constants:
     def rsrrepair_userspace_path(self):
         return self.payload_path / Path("Tools/RSRRepair")
 
+    @property
+    def btcoex_helper_root_path(self):
+        return self.payload_path / Path("Tools/BTCoex")
+
     # Icons
     @property
     def icns_resource_path(self):
