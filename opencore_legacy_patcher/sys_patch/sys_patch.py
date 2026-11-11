@@ -468,6 +468,8 @@ class PatchSysVolume:
             sys_patch_helpers.SysPatchHelpers(self.constants).disable_window_server_caching()
         if "Metal 3802 Common Extended" in required_patches:
             sys_patch_helpers.SysPatchHelpers(self.constants).patch_gpu_compiler_libraries(mount_point=self.mount_location)
+        if "Modern Wireless Bluetooth Coexistence" in required_patches:
+            sys_patch_helpers.SysPatchHelpers(self.constants).install_bluetooth_coexistence_daemon(mount_point=self.mount_location)
 
         self._write_patchset(required_patches)
 

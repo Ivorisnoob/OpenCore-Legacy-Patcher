@@ -13,7 +13,7 @@ from datetime import datetime
 
 from .. import constants
 
-from ..datasets import os_data
+from ..datasets import os_data, bluetooth_coex_data
 from ..volume   import generate_copy_arguments
 
 from ..support import (
@@ -178,6 +178,51 @@ class SysPatchHelpers:
         if result.returncode != 0:
             logging.info("- Failed to install RSRRepair")
             subprocess_wrapper.log(result)
+
+
+    def install_bluetooth_coexistence_daemon(self, mount_point: Union[str, Path]):
+        """
+        Installs LaunchDaemon for oclp-btcoex
+
+        Since macOS 15, airportd no longer loads Wi-Fi/Bluetooth coexistence profiles
+        for Modern Wireless cards. As the driver drops them on reset, sleep and
+        while joining a network, the LaunchDaemon keeps the tool running to reload them.
+        """
+        board_id = self.constants.computer.real_board_id
+        profile = bluetooth_coex_data.bluetooth_coex_profiles.get(board_id)
+        if profile is None:
+            return
+
+        label = "com.dortania.opencore-legacy-patcher.btcoex"
+        launch_daemon = {
+            "Label": label,
+            "ProgramArguments": [
+                "/usr/libexec/oclp-btcoex",
+                "--daemon",
+                "--profile-mode", str(profile["Profile Mode"]),
+                "--chains",       str(profile["Chains"]),
+                "--ack",          ",".join(str(value) for value in profile["ACK"]),
+                "--power",        ",".join(str(value) for value in profile["Power Offsets"]),
+                "--desense",      ",".join(str(value) for value in profile["Desense"]),
+            ],
+            "RunAtLoad": True,
+            "KeepAlive": True,
+            "ProcessType": "Background",
+            "LowPriorityIO": True,
+        }
+
+        logging.info(f"- Installing Bluetooth coexistence daemon for {board_id}")
+        source_file = Path(self.constants.payload_path) / f"{label}.plist"
+        destination_folder = f"{mount_point}/System/Library/LaunchDaemons"
+        destination_file = f"{destination_folder}/{label}.plist"
+
+        with source_file.open("wb") as file:
+            plistlib.dump(launch_daemon, file, sort_keys=False)
+        if Path(destination_file).exists():
+            subprocess_wrapper.run_as_root_and_verify(["/bin/rm", destination_file], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess_wrapper.run_as_root_and_verify(generate_copy_arguments(str(source_file), destination_folder), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess_wrapper.run_as_root_and_verify(["/bin/chmod", "644", destination_file], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess_wrapper.run_as_root_and_verify(["/usr/sbin/chown", "root:wheel", destination_file], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
     def patch_gpu_compiler_libraries(self, mount_point: Union[str, Path]):

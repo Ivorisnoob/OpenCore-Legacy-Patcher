@@ -36,6 +36,7 @@ __pycache__/
 *.log
 /Universal-Binaries.dmg
 /payloads/KDKInfo.plist
+/payloads/com.dortania.opencore-legacy-patcher.btcoex.plist
 /payloads/update.sh
 /payloads/OpenCore-Patcher.app
 /.x86_64_venv

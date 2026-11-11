@@ -10,6 +10,7 @@ from .....constants  import Constants
 from .....detections import device_probe
 
 from .....datasets.os_data import os_data
+from .....datasets          import bluetooth_coex_data
 
 
 class ModernWireless(BaseHardware):
@@ -103,6 +104,28 @@ class ModernWireless(BaseHardware):
             },
         }
 
+
+    def _patches_modern_wireless_bluetooth_coexistence(self) -> dict:
+        """
+        Bluetooth coexistence patches, airportd no longer loads profiles for our cards
+        """
+        if self._xnu_major < os_data.sequoia:
+            return {}
+
+        if self._computer.real_board_id not in bluetooth_coex_data.bluetooth_coex_profiles:
+            return {}
+
+        return {
+            "Modern Wireless Bluetooth Coexistence": {
+                PatchType.OVERWRITE_SYSTEM_VOLUME: {
+                    "/usr/libexec": {
+                        "oclp-btcoex": str(self._constants.btcoex_helper_root_path),
+                    },
+                },
+            },
+        }
+
+
     def patches(self) -> dict:
         """
         Dictionary of patches
@@ -113,6 +136,7 @@ class ModernWireless(BaseHardware):
         return {
             **self._patches_modern_wireless_common(),
             **self._patches_modern_wireless_common_extended(),
+            **self._patches_modern_wireless_bluetooth_coexistence(),
         }
 
         return _base
